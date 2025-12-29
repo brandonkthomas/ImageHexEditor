@@ -75,10 +75,20 @@ export function analyzeJpeg(bytes: Uint8Array): JpegLayout | null {
         const marker = bytes[pos + 1];
         const markerStart = pos;
 
-        // EOI (FF D9) – mark and stop.
+        // EOI (FF D9) – mark and continue scanning; some files may contain
+        // additional JPEG-like data (e.g., Adobe-style concatenated images).
         if (marker === 0xd9) {
             markRange(regions, markerStart, Math.min(markerStart + 2, len), RegionCode.Eoi);
-            break;
+            pos = markerStart + 2;
+            continue;
+        }
+
+        // Additional SOI markers (FF D8) after the initial one – treat as the
+        // start of another image region so jump-to and visualization can see it.
+        if (marker === 0xd8) {
+            markRange(regions, markerStart, Math.min(markerStart + 2, len), RegionCode.Soi);
+            pos = markerStart + 2;
+            continue;
         }
 
         // Restart markers (FF D0–D7) – two-byte markers with no length.
