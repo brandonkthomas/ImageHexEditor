@@ -1,0 +1,99 @@
+@{
+    ViewData["Title"] = "Image Hex Editor";
+}
+
+<section class="ix-page">
+    <div class="glass-surface glass-surface--fallback ix-card" role="region" aria-label="Image Hex Editor">
+        <div class="glass-surface__content ix-card-content">
+            <header class="ix-header">
+                <div class="ix-header-main">
+                    <div class="ix-title">
+                        <span class="ix-title-main">Image Hex Editor</span>
+                        <span class="ix-title-sub">Client-side JPEG glitching and exploration.</span>
+                    </div>
+                </div>
+                <div class="ix-header-actions">
+                    <input id="ix-file-input" type="file" accept="image/jpeg,image/jpg" hidden />
+                </div>
+            </header>
+
+            <div class="ix-upload">
+                <div class="ix-dropzone" id="ix-dropzone">
+                    <input type="file" id="ix-file-input" accept="image/*" hidden />
+                    <div class="ix-drop-inner">
+                        <div class="ix-drop-text">
+                            <span class="ix-drop-text--desktop">Drag &amp; drop or click to upload</span>
+                            <span class="ix-drop-text--mobile" aria-hidden="true">Tap to Upload</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ix-status" id="ix-status" aria-live="polite"></div>
+            </div>
+
+            <div class="ix-toolbar" id="ix-toolbar" aria-label="Editing tools" hidden>
+                <div class="ix-toolbar-group">
+                    <button id="ix-undo-btn" type="button" class="ix-toolbar-btn" disabled>Undo</button>
+                    <button id="ix-redo-btn" type="button" class="ix-toolbar-btn" disabled>Redo</button>
+                </div>
+                <div class="ix-toolbar-group">
+                    <button id="ix-find-btn" type="button" class="ix-toolbar-btn" disabled>Find / Replace</button>
+                    <button id="ix-insert-btn" type="button" class="ix-toolbar-btn" disabled>Insert Text</button>
+                </div>
+                <div class="ix-status ix-status--secondary" id="ix-editor-status" aria-live="polite"></div>
+            </div>
+
+            <div class="ix-layout" id="ix-main" hidden>
+                <div class="ix-editor">
+                    <div class="ix-grid-wrapper">
+                        <div class="ix-grid-header">
+                            <div class="ix-offset-header">Offset</div>
+                            <div class="ix-bytes-header">
+                                @for (var i = 0; i < 16; i++)
+                                {
+                                    <span>@i.ToString("X2")</span>
+                                }
+                            </div>
+                            <div class="ix-ascii-header">ASCII</div>
+                        </div>
+                        <div class="ix-grid-body" id="ix-grid" tabindex="0" aria-label="Hex editor"></div>
+                    </div>
+                </div>
+
+                <aside class="ix-preview">
+                    <div class="ix-preview-frame">
+                        <img id="ix-preview-image" alt="JPEG preview" />
+                    </div>
+                    <dl class="ix-meta">
+                        <div class="ix-meta-row">
+                            <dt>File</dt>
+                            <dd id="ix-meta-filename">—</dd>
+                        </div>
+                        <div class="ix-meta-row">
+                            <dt>Size</dt>
+                            <dd id="ix-meta-size">—</dd>
+                        </div>
+                        <div class="ix-meta-row">
+                            <dt>Dimensions</dt>
+                            <dd id="ix-meta-dimensions">—</dd>
+                        </div>
+                    </dl>
+                    <button id="ix-download-btn" type="button" class="ix-toolbar-btn ix-toolbar-btn--secondary" disabled>
+                        Download JPEG
+                    </button>
+                </aside>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Styles {
+    <link rel="stylesheet" href="~/apps/imagehexeditor/css/apps/imagehexeditor.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script src="~/apps/imagehexeditor/dist/js/imagehexeditor.js" type="module" asp-append-version="true"></script>
+}
+
+
+
+
