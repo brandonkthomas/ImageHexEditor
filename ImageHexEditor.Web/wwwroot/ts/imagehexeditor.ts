@@ -8,6 +8,7 @@ import { createEmptyState, applyEdit, applyInsert, canRedo, canUndo, loadNewFile
 import { createHexGrid } from './hexGrid';
 import { byteToHex, classifyByte } from './jpegStructure';
 import PhotoLightbox from '../../../../../wwwroot/ts/components/photoLightbox';
+import { showAlert, showPrompt } from '../../../../../wwwroot/ts/components/dialogs';
 
 // Prevents excessive memory/CPU usage when rendering large files
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -796,16 +797,34 @@ function initImageHexEditor() {
         }
     });
 
-    findBtn.addEventListener('click', () => {
+    findBtn.addEventListener('click', async () => {
         if (!state.bytes || state.bytes.length === 0) {
             setStatus('Load a JPEG before using Find / Replace.');
             return;
         }
 
-        const findText = window.prompt('Find ASCII text (searches raw bytes):');
+        const findText = await showPrompt({
+            title: 'Find text',
+            message: 'Find ASCII text (searches raw bytes).',
+            placeholder: 'Text to find',
+            defaultValue: '',
+            required: true,
+            variant: 'info',
+            primaryLabel: 'Find',
+            secondaryLabel: 'Cancel',
+        });
         if (!findText) return;
 
-        const replaceText = window.prompt('Replace with (leave blank to just select):') ?? '';
+        const replaceText = (await showPrompt({
+            title: 'Replace with',
+            message: 'Replace with (leave blank to just select).',
+            placeholder: 'Replacement text (optional)',
+            defaultValue: '',
+            required: false,
+            variant: 'default',
+            primaryLabel: 'OK',
+            secondaryLabel: 'Skip',
+        })) ?? '';
 
         const findBytes = textToBytes(findText);
         if (findBytes.length === 0) return;
@@ -821,7 +840,7 @@ function initImageHexEditor() {
         if (replaceText.length > 0) {
             const replaceBytes = textToBytes(replaceText);
             if (replaceBytes.length !== findBytes.length) {
-                window.alert('For now, replacement text must be the same length as the search text.');
+                await showAlert('Replacement text must be the same length as the search text.');
             } else {
                 applyEdit(state, (draft) => {
                     draft.set(replaceBytes, index);
@@ -838,12 +857,22 @@ function initImageHexEditor() {
         syncStatusForCaret();
     });
 
-    insertBtn.addEventListener('click', () => {
+    insertBtn.addEventListener('click', async () => {
         if (!state.bytes) {
             setStatus('Load a JPEG before inserting text.');
             return;
         }
-        const text = window.prompt('Text to insert at current offset (ASCII):');
+
+        const text = await showPrompt({
+            title: 'Insert text',
+            message: 'Insert ASCII text at the current offset.',
+            placeholder: 'Text to insert',
+            defaultValue: '',
+            required: true,
+            variant: 'success',
+            primaryLabel: 'Insert',
+            secondaryLabel: 'Cancel',
+        });
         if (!text) return;
         const insertBytes = textToBytes(text);
         if (insertBytes.length === 0) return;
