@@ -168,6 +168,9 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         root.appendChild(sampleRow);
         const rect = sampleRow.getBoundingClientRect();
         rowHeight = rect.height || 18;
+        
+        // Clear the sample row after measuring to prevent it from being visible
+        root.innerHTML = '';
     }
 
     // ============================================================================================
