@@ -1,3 +1,11 @@
+/*
+ * imagehexeditor.css - Image hex editor layout and styles
+ */
+
+/* =============================================================================
+ * Main page container and card structure
+ * ============================================================================= */
+
 .ix-page {
     display: flex;
     flex-direction: column;
@@ -37,6 +45,10 @@
     justify-content: center;
 }
 
+/* =============================================================================
+ * Header and title section
+ * ============================================================================= */
+
 .ix-header {
     display: flex;
     justify-content: space-between;
@@ -75,6 +87,10 @@
     align-items: center;
     gap: 0.5rem;
 }
+
+/* =============================================================================
+ * Upload section and drag-and-drop zone
+ * ============================================================================= */
 
 .ix-upload {
     max-width: 720px;
@@ -126,6 +142,10 @@
 .ix-drop-text--mobile {
     display: none;
 }
+
+/* =============================================================================
+ * Toolbar and action buttons
+ * ============================================================================= */
 
 .ix-toolbar {
     display: flex;
@@ -200,6 +220,10 @@
     display: none !important;
 }
 
+/* =============================================================================
+ * Status display
+ * ============================================================================= */
+
 .ix-status {
     margin-left: auto;
     flex: 0 0 auto;
@@ -217,6 +241,10 @@
     text-align: left;
 }
 
+/* =============================================================================
+ * Main editor layout (grid with editor and preview columns)
+ * ============================================================================= */
+
 .ix-layout {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -224,6 +252,10 @@
     align-items: stretch;
     margin-top: 0.5rem;
 }
+
+/* =============================================================================
+ * Editor container and drop-hint overlay
+ * ============================================================================= */
 
 .ix-editor {
     position: relative;
@@ -274,6 +306,10 @@
     background: radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 55%);
 }
 
+/* =============================================================================
+ * Hex grid container and layout
+ * ============================================================================= */
+
 .ix-grid-wrapper {
     position: relative;
     border-radius: 8px;
@@ -315,6 +351,10 @@
     padding: 0.25rem 0.25rem 0.25rem 0.5rem;
 }
 
+/* =============================================================================
+ * Hex grid rows, bytes, and ASCII display
+ * ============================================================================= */
+
 .ix-row {
     display: grid;
     grid-template-columns: 5.25rem minmax(0, 1fr) 7rem;
@@ -344,6 +384,10 @@
     padding-left: 0.5rem;
     color: rgba(255, 255, 255, 0.7);
 }
+
+/* =============================================================================
+ * Byte styling with region-based color coding
+ * ============================================================================= */
 
 .ix-byte {
     min-width: 2ch;
@@ -441,6 +485,10 @@
     color: rgba(255, 255, 255, 0.35);
 }
 
+/* =============================================================================
+ * Image preview and controls
+ * ============================================================================= */
+
 .ix-preview {
     display: flex;
     flex-direction: column;
@@ -457,6 +505,10 @@
     flex-wrap: wrap;
     gap: 0.5rem;
 }
+
+/* =============================================================================
+ * Jump menu for navigating JPEG sections
+ * ============================================================================= */
 
 .ix-jump-menu {
     position: absolute;
@@ -549,7 +601,10 @@
     opacity: 0.3;
 }
 
-/* Jump-to label color coding (match hex byte colors) */
+/* =============================================================================
+ * Jump menu label color coding (matches hex byte colors)
+ * ============================================================================= */
+
 .ix-jump-label--soi {
     background: #005b4f;
     color: #b2fff0;
@@ -599,6 +654,10 @@
     background: #005b4f;
     color: #b2fff0;
 }
+
+/* =============================================================================
+ * Preview frame and zoom button
+ * ============================================================================= */
 
 .ix-preview-frame {
     position: relative;
@@ -703,6 +762,10 @@
     image-rendering: crisp-edges;
 }
 
+/* =============================================================================
+ * File metadata display
+ * ============================================================================= */
+
 .ix-meta {
     display: grid;
     grid-auto-flow: row;
@@ -726,6 +789,10 @@
     overflow: hidden;
     white-space: nowrap;
 }
+
+/* =============================================================================
+ * Responsive breakpoints for mobile and tablet
+ * ============================================================================= */
 
 @media (max-width: 960px) {
     .ix-layout {

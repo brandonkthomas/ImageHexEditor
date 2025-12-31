@@ -1,15 +1,20 @@
+/**
+ * hexGrid.ts
+ * @fileoverview Interactive hex grid UI for JPEG byte editing with virtual scrolling.
+ * Renders hex bytes in a grid layout with region-based coloring, caret navigation, 
+ * and two-stage nibble editing. Includes virtualized rendering for performance and 
+ * ASCII column display. Supports keyboard navigation, click selection, and scroll synchronization.
+ */
+
 import { ByteRegion, byteToAscii, byteToHex, classifyByte, JpegLayout, offsetToHex } from './jpegStructure';
 
 // ============================================================================================
-/// <summary>
-/// The hex grid options
-/// </summary>
-/// <param name="onEditByte">The callback to edit a byte</param>
-/// <param name="onMoveCaret">The callback to move the caret</param>
-/// <param name="isAutoAdvanceEnabled">
-///     Optional callback to determine whether the caret should auto-advance
-///     after completing a byte edit. Defaults to true when omitted.
-/// </param>
+/**
+ * The hex grid options
+ * @param {function(number, number): void} onEditByte - The callback to edit a byte
+ * @param {function(number): void} onMoveCaret - The callback to move the caret
+ * @param {function(): boolean} isAutoAdvanceEnabled - Optional callback to determine whether the caret should auto-advance after completing a byte edit. Defaults to true when omitted.
+ */
 export interface HexGridOptions {
     onEditByte?: (offset: number, nextValue: number) => void;
     onMoveCaret?: (offset: number) => void;
@@ -17,12 +22,12 @@ export interface HexGridOptions {
 }
 
 // ============================================================================================
-/// <summary>
-/// The hex grid interface
-/// </summary>
-/// <param name="setData">Set the data for the grid</param>
-/// <param name="setActiveOffset">Set the active offset for the grid</param>
-/// <param name="getActiveOffset">Get the active offset for the grid</returns>
+/**
+ * The hex grid interface
+ * @param {function(Uint8Array | null, JpegLayout | null, number): void} setData - Set the data for the grid
+ * @param {function(number, boolean): void} setActiveOffset - Set the active offset for the grid
+ * @param {function(): number} getActiveOffset - Get the active offset for the grid
+ */
 export interface HexGrid {
     setData(bytes: Uint8Array | null, layout: JpegLayout | null, activeOffset: number): void;
     setActiveOffset(offset: number, centerIntoView?: boolean): void;
@@ -30,12 +35,12 @@ export interface HexGrid {
 }
 
 // ============================================================================================
-/// <summary>
-/// Create a new hex grid
-/// </summary>
-/// <param name="root">The root element to mount the grid into</param>
-/// <param name="opts">The options for the grid</param>
-/// <returns>The created hex grid</returns>
+/**
+ * Create a new hex grid
+ * @param {HTMLElement} root - The root element to mount the grid into
+ * @param {HexGridOptions} opts - The options for the grid
+ * @returns {HexGrid} The created hex grid
+ */
 export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid {
     root.classList.add('ix-grid-body');
     root.tabIndex = 0;
@@ -53,6 +58,10 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     let rowHeight = 0; // measured in pixels once we have a row
 
     // ============================================================================================
+    /**
+     * Ensure the active offset is within valid bounds [0, renderLength).
+     * Clamps the offset if it falls outside this range.
+     */
     function ensureActiveOffset(): void {
         if (!bytes || renderLength === 0) {
             activeOffset = 0;
@@ -63,6 +72,12 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Map a ByteRegion to its corresponding CSS class name for styling.
+     * Used to visually distinguish different JPEG structural sections (SOI, DQT, SOS, etc).
+     * @param {ByteRegion} region - The byte region classification
+     * @returns {string} CSS class name for the region, or empty string if unrecognized
+     */
     function regionClass(region: ByteRegion): string {
         switch (region) {
             case 'soi': return 'ix-byte--soi';
@@ -83,6 +98,12 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Clamp a row index to the valid visible window range.
+     * Ensures firstVisibleRow stays within [0, totalRows - VISIBLE_ROWS] to prevent over-scrolling.
+     * @param {number} row - The requested row index
+     * @returns {number} The clamped row index
+     */
     function clampFirstVisibleRow(row: number): number {
         if (totalRows <= VISIBLE_ROWS) return 0;
         const maxStart = totalRows - VISIBLE_ROWS;
@@ -92,6 +113,13 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Build a single row of the hex grid with hex bytes, ASCII column, and region-based coloring.
+     * Creates DOM elements for offset label, byte hex values, and corresponding ASCII characters.
+     * Marks bytes as placeholders if they fall beyond the file length.
+     * @param {number} row - The row index to build
+     * @returns {HTMLDivElement} The constructed row element
+     */
     function buildRow(row: number): HTMLDivElement {
         const rowStart = row * BYTES_PER_ROW;
         const totalLength = renderLength;
@@ -159,6 +187,11 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Ensure row height is measured and cached.
+     * Renders a sample row, measures its height, then clears it to avoid side effects.
+     * Called once before rendering the virtualized window to enable row-to-pixel calculations.
+     */
     function ensureRowHeight(): void {
         if (rowHeight > 0 || !bytes || renderLength === 0) return;
 
@@ -174,6 +207,11 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Render the visible window of rows using virtualization.
+     * Uses spacer divs to represent out-of-view rows and only renders visible rows in the DOM.
+     * Displays a placeholder message if no data is loaded.
+     */
     function renderWindow(): void {
         root.innerHTML = '';
 
@@ -212,6 +250,12 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Ensure the active offset is visible within the viewport and re-render if needed.
+     * Optionally centers the active row or keeps it within the virtualized window.
+     * Adjusts scrollTop to match the viewport when centering is requested.
+     * @param {boolean} centerIntoView - Whether to center the active row or just keep it visible
+     */
     function ensureVisibleForActive(centerIntoView: boolean): void {
         if (!bytes || renderLength === 0 || totalRows === 0) {
             firstVisibleRow = 0;
@@ -274,6 +318,11 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Reset and re-display the byte content at a specific offset.
+     * Updates both the hex display and the ASCII column after an edit.
+     * @param {number} offset - The byte offset to update
+     */
     function resetDisplayForOffset(offset: number): void {
         if (!bytes || offset < 0 || offset >= renderLength) return;
         const value = bytes[offset];
@@ -284,6 +333,11 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Display a pending first nibble in the active byte cell with underscore suffix.
+     * Shows a preview of the ASCII character that would result from the complete byte.
+     * @param {number} firstNibble - The hex digit (0-15) entered as the first nibble
+     */
     function showPendingNibble(firstNibble: number): void {
         if (!bytes || renderLength === 0) return;
         const current = bytes[activeOffset];
@@ -300,6 +354,12 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Move the caret by a delta offset and trigger the onMoveCaret callback.
+     * Clamps the new offset to valid bounds and ensures it's visible in the viewport.
+     * Cancels any pending nibble input before moving.
+     * @param {number} delta - The signed offset delta (e.g., -1 for left, +16 for down)
+     */
     function moveCaret(delta: number): void {
         if (!bytes || renderLength === 0) return;
         const prevOffset = activeOffset;
@@ -313,6 +373,11 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Determine whether auto-advance should occur after completing a byte edit.
+     * Calls the isAutoAdvanceEnabled callback if provided; falls back to true if it throws.
+     * @returns {boolean} Whether to advance the caret after an edit
+     */
     function isAutoAdvanceOnEdit(): boolean {
         if (typeof opts.isAutoAdvanceEnabled === 'function') {
             try {
@@ -327,6 +392,12 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Handle keyboard input for navigation and byte editing.
+     * Arrow keys move the caret, hex digits enter nibbles, Backspace clears to 0x00.
+     * Home/End jump to bounds; Page Up/Down move by page. Pending nibble input is shown visually.
+     * @param {KeyboardEvent} ev - The keyboard event
+     */
     function handleKeyDown(ev: KeyboardEvent): void {
         if (!bytes || bytes.length === 0) return;
 
@@ -415,6 +486,12 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    /**
+     * Parse a keyboard key into a hexadecimal digit value.
+     * Accepts '0'-'9' and 'a'-'f' (case-insensitive).
+     * @param {string} key - The key string from a KeyboardEvent
+     * @returns {number | null} The hex value (0-15) or null if not a hex digit
+     */
     function parseHexKey(key: string): number | null {
         if (key.length !== 1) return null;
         if (key >= '0' && key <= '9') return key.charCodeAt(0) - 48;

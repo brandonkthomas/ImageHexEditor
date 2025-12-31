@@ -1,9 +1,15 @@
+/**
+ * imagehexeditor.ts
+ * @fileoverview JPEG hexadecimal editor with structure analysis and preview
+ * @description Interactive hex editor for viewing/editing JPEG bytes with region markers
+ */
+
 import { createEmptyState, applyEdit, applyInsert, canRedo, canUndo, loadNewFile, redo, setActiveOffset, undo } from './editorState';
 import { createHexGrid } from './hexGrid';
 import { byteToHex, classifyByte } from './jpegStructure';
 import PhotoLightbox from '../../../../../wwwroot/ts/photoLightbox';
 
-// To avoid excessive memory / CPU usage, cap the file size we actively keep and render.
+// Prevents excessive memory/CPU usage when rendering large files
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
 
 type RegionId =
@@ -31,6 +37,11 @@ const REGION_DEFS: { id: RegionId; label: string }[] = [
     { id: 'eoi',        label: 'End of Image Marker' }
 ];
 
+// ============================================================================================
+/**
+ * Initialize the image hex editor
+ * @description Sets up DOM elements, creates hex grid, wires event listeners, and initializes state
+ */
 function initImageHexEditor() {
     console.info('[ImageHexEditor] init');
 
@@ -94,6 +105,13 @@ function initImageHexEditor() {
     let previewLightboxHost: HTMLElement | null = null;
     let previewLightbox: PhotoLightbox | null = null;
 
+    // ============================================================================================
+    /**
+     * Convert bytes to human-readable size string
+     * @description Converts to KB/MB with fixed decimals (e.g., 1.5 KB, 12.34 MB)
+     * @param {number} bytes - The number of bytes to convert
+     * @returns {string} The human-readable size string
+     */
     function humanSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} bytes`;
         const kb = bytes / 1024;
@@ -102,15 +120,33 @@ function initImageHexEditor() {
         return `${mb.toFixed(2)} MB`;
     }
 
+    // ============================================================================================
+    /**
+     * Set the status message in the status element
+     * @description Also logs to console for debugging
+     * @param {string} message - The message to display
+     */
     function setStatus(message: string): void {
         console.info('[ImageHexEditor] Status:', message);
         statusEl!.textContent = message;
     }
 
+    // ============================================================================================
+    /**
+     * Set editor status message (shows current byte offset and value)
+     * @description Updates the editor-specific status line without console logging
+     * @param {string} message - The message to display
+     */
     function setEditorStatus(message: string): void {
         editorStatusEl!.textContent = message;
     }
 
+    // ============================================================================================
+    /**
+     * Get or create the lightbox host element for preview zoom
+     * @description Creates a hidden container for the photo lightbox on first call
+     * @returns {HTMLElement} The lightbox host element (guaranteed to be in DOM)
+     */
     function ensurePreviewLightboxHost(): HTMLElement {
         if (previewLightboxHost && previewLightboxHost.isConnected) {
             return previewLightboxHost;
@@ -125,6 +161,11 @@ function initImageHexEditor() {
         return host;
     }
 
+    // ============================================================================================
+    /**
+     * Update lightbox trigger with current preview image data
+     * @description Syncs src, width, height from previewImg to lightbox trigger element
+     */
     function syncPreviewLightboxSourceFromImage(): void {
         if (!previewImg || !previewImg.src) return;
 
@@ -168,6 +209,11 @@ function initImageHexEditor() {
         }
     }
 
+    // ============================================================================================
+    /**
+     * Open the preview image in the lightbox viewer
+     * @description Initializes lightbox if needed and displays the current preview image
+     */
     function openPreviewLightbox(): void {
         if (!previewImg || !previewImg.src) return;
 
@@ -189,6 +235,11 @@ function initImageHexEditor() {
         previewLightbox.open(0, host);
     }
 
+    // ============================================================================================
+    /**
+     * Recompute offsets of each JPEG region type
+     * @description Scans layout to find where each region (SOI, APP, DQT, etc.) appears, stores in regionOffsets
+     */
     function recomputeRegionOffsets(): void {
         const nextOffsets: Record<RegionId, number[]> = Object.create(null);
         for (const def of REGION_DEFS) {
@@ -220,6 +271,11 @@ function initImageHexEditor() {
         regionOffsets = nextOffsets;
     }
 
+    // ============================================================================================
+    /**
+     * Compute count of each JPEG region type from offsets
+     * @description Populates regionCounts from regionOffsets for jump menu display
+     */
     function ensureRegionCounts(): void {
         const counts: Record<RegionId, number> = Object.create(null);
         for (const def of REGION_DEFS) {
@@ -228,6 +284,11 @@ function initImageHexEditor() {
         regionCounts = counts;
     }
 
+    // ============================================================================================
+    /**
+     * Build jump menu DOM with region rows and navigation buttons
+     * @description Creates static region definition rows with Prev/Next buttons, wires click handlers
+     */
     function initJumpMenuDom(): void {
         if (jumpMenuInitialized) return;
         jumpMenuInitialized = true;
@@ -289,6 +350,11 @@ function initImageHexEditor() {
         });
     }
 
+    // ============================================================================================
+    /**
+     * Update jump menu counts display for each region
+     * @description Initializes menu if needed, updates counts and button states based on regionCounts
+     */
     function updateJumpMenuCounts(): void {
         initJumpMenuDom();
         ensureRegionCounts();
@@ -342,6 +408,14 @@ function initImageHexEditor() {
 
     type JumpDirection = 'prev' | 'next';
 
+    // ============================================================================================
+    /**
+     * Find next/prev occurrence of a JPEG region type
+     * @description Searches regionOffsets in direction, wraps at boundaries
+     * @param {RegionId} region - The region to find the offset for
+     * @param {JumpDirection} dir - 'next' or 'prev' from current caret
+     * @returns {number | null} The offset for the region, or null if not found
+     */
     function findOffsetForRegion(region: RegionId, dir: JumpDirection): number | null {
         if (!state.bytes) return null;
         const offsets = regionOffsets[region] ?? [];
@@ -374,6 +448,13 @@ function initImageHexEditor() {
         return offsets[offsets.length - 1];
     }
 
+    // ============================================================================================
+    /**
+     * Jump to next/prev occurrence of a JPEG region
+     * @description Validates state, finds offset, updates caret, displays status message
+     * @param {RegionId} region - The region to jump to
+     * @param {JumpDirection} dir - 'next' or 'prev' direction
+     */
     function handleJump(region: RegionId, dir: JumpDirection): void {
         if (!state.bytes || !state.layout) {
             setStatus('Load a JPEG before jumping.');
@@ -398,6 +479,12 @@ function initImageHexEditor() {
         syncStatusForCaret();
     }
 
+    // ============================================================================================
+    /**
+     * Show or hide the preview loading throbber animation
+     * @description Adds/removes visible class for CSS animation
+     * @param {boolean} isLoading - Whether the preview is loading
+     */
     function setPreviewLoading(isLoading: boolean): void {
         if (!previewThrobber) return;
         if (isLoading) {
@@ -407,6 +494,11 @@ function initImageHexEditor() {
         }
     }
 
+    // ============================================================================================
+    /**
+     * Update toolbar button disabled states based on editor state
+     * @description Reflects whether file is loaded and undo/redo are available
+     */
     function syncToolbar(): void {
         const hasBytes = !!state.bytes && state.bytes.length > 0;
         undoBtn!.disabled = !hasBytes || !canUndo(state);
@@ -419,6 +511,11 @@ function initImageHexEditor() {
         previewZoomBtn!.disabled = !hasBytes || !previewImg!.src;
     }
 
+    // ============================================================================================
+    /**
+     * Update metadata display (filename, file size)
+     * @description Shows file information in the meta panel
+     */
     function syncMeta(): void {
         metaFilename!.textContent = state.fileName ?? '—';
         if (!state.bytes) {
@@ -431,6 +528,11 @@ function initImageHexEditor() {
         metaSize!.textContent = base;
     }
 
+    // ============================================================================================
+    /**
+     * Update editor status with current caret offset and byte value
+     * @description Shows hex offset and value (e.g., "0x000000 = 0xFF")
+     */
     function syncStatusForCaret(): void {
         if (!state.bytes || state.bytes.length === 0) {
             setEditorStatus('Drop a JPEG to begin.');
@@ -441,6 +543,11 @@ function initImageHexEditor() {
         setEditorStatus(`Offset 0x${offset.toString(16).padStart(6, '0').toUpperCase()} = 0x${value.toString(16).padStart(2, '0').toUpperCase()}`);
     }
 
+    // ============================================================================================
+    /**
+     * Schedule a debounced preview image regeneration
+     * @description Delays updatePreview to batch rapid edits, prevents excessive blob creation
+     */
     function schedulePreviewUpdate(): void {
         if (previewScheduled) return;
         previewScheduled = true;
@@ -455,6 +562,11 @@ function initImageHexEditor() {
         }, 150);
     }
 
+    // ============================================================================================
+    /**
+     * Regenerate preview image from edited bytes
+     * @description Creates new blob from current bytes, updates previewImg src, cleans up old URLs
+     */
     function updatePreview(): void {
         if (!state.bytes || state.bytes.length === 0) {
             if (previewUrl) {
@@ -500,6 +612,11 @@ function initImageHexEditor() {
         previewZoomBtn.disabled = true;
     });
 
+    // ============================================================================================
+    /**
+     * Refresh entire UI with current editor state
+     * @description Updates grid, toolbar, meta, status, region offsets, and schedules preview update
+     */
     function syncView(): void {
         grid.setData(state.bytes, state.layout, state.activeOffset);
         syncToolbar();
@@ -514,6 +631,12 @@ function initImageHexEditor() {
         schedulePreviewUpdate();
     }
 
+    // ============================================================================================
+    /**
+     * Load a file into the editor
+     * @description Validates file type/size, reads as ArrayBuffer, updates state and UI
+     * @param {File} file - The file to handle
+     */
     function handleFile(file: File): void {
         if (!file) return;
         if (!file.type || !file.type.startsWith('image/')) {
@@ -561,6 +684,12 @@ function initImageHexEditor() {
         reader.readAsArrayBuffer(file);
     }
 
+    // ============================================================================================
+    /**
+     * Process files from input or drag/drop
+     * @description Extracts first file and passes to handleFile
+     * @param {FileList | null} files - The files to handle
+     */
     function handleFiles(files: FileList | null): void {
         if (!files || files.length === 0) return;
         handleFile(files[0]);
@@ -629,6 +758,12 @@ function initImageHexEditor() {
         }
     });
 
+    // ============================================================================================
+    /**
+     * Generate download filename with -modified suffix
+     * @description Preserves original extension, inserts suffix before extension
+     * @returns {string} The download file name
+     */
     function buildDownloadFileName(): string {
         const original = state.fileName || 'image.jpg';
         const dot = original.lastIndexOf('.');
@@ -750,6 +885,13 @@ function initImageHexEditor() {
     toolbarEl.hidden = true;
 }
 
+// ============================================================================================
+/**
+ * Convert ASCII text string to Uint8Array of character codes
+ * @description Each character converted to byte value (codePoint & 0xFF)
+ * @param {string} text - The text to convert
+ * @returns {Uint8Array} The bytes array
+ */
 function textToBytes(text: string): Uint8Array {
     const arr = new Uint8Array(text.length);
     for (let i = 0; i < text.length; i++) {
@@ -758,6 +900,15 @@ function textToBytes(text: string): Uint8Array {
     return arr;
 }
 
+// ============================================================================================
+/**
+ * Find first occurrence of needle bytes within haystack
+ * @description Performs byte-by-byte comparison starting from fromIndex, returns -1 if not found
+ * @param {Uint8Array} haystack - The haystack to search in
+ * @param {Uint8Array} needle - The needle to search for
+ * @param {number} fromIndex - The index to start searching from
+ * @returns {number} The index of the bytes array, or -1 if not found
+ */
 function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, fromIndex: number): number {
     const limit = haystack.length - needle.length;
     outer: for (let i = fromIndex; i <= limit; i++) {
@@ -772,7 +923,3 @@ function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, fromIndex: numbe
 initImageHexEditor();
 
 export {};
-
-
-
-

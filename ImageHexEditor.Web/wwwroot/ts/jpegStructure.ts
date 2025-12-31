@@ -1,3 +1,9 @@
+/**
+ * jpegStructure.ts
+ * @fileoverview JPEG byte classification and structure analysis
+ * @description Identifies JPEG markers, regions, and provides hex/ASCII conversion
+ */
+
 export type ByteRegion =
     | 'unknown'
     | 'soi'
@@ -32,11 +38,11 @@ enum RegionCode {
 }
 
 // ============================================================================================
-/// <summary>
-/// The layout of the JPEG
-/// </summary>
-/// <param name="length">The total number of bytes in the JPEG</param>
-/// <param name="regions">The per-byte region codes</param>
+/**
+ * The layout of the JPEG
+ * @param {number} length - The total number of bytes in the JPEG
+ * @param {Uint8Array} regions - The per-byte region codes
+ */
 export interface JpegLayout {
     /** Total number of bytes in the JPEG. */
     length: number;
@@ -45,13 +51,13 @@ export interface JpegLayout {
 }
 
 // ============================================================================================
-/// <summary>
-/// Analyze a JPEG and classify each byte according to the high-level anatomy:
-/// SOI, APPn, DQT, SOF (with width bytes), DHT, DRI, SOS header, scan data,
-/// restart markers, COM, EOI, and "other".
-/// </summary>
-/// <param name="bytes">The bytes of the JPEG</param>
-/// <returns>The layout of the JPEG</returns>
+/**
+ * Analyze a JPEG and classify each byte according to the high-level anatomy:
+ * SOI, APPn, DQT, SOF (with width bytes), DHT, DRI, SOS header, scan data,
+ * restart markers, COM, EOI, and "other".
+ * @param {Uint8Array} bytes - The bytes of the JPEG
+ * @returns {JpegLayout | null} The layout of the JPEG
+ */
 export function analyzeJpeg(bytes: Uint8Array): JpegLayout | null {
     const len = bytes.length;
     if (len < 4) return null;
@@ -163,12 +169,12 @@ export function analyzeJpeg(bytes: Uint8Array): JpegLayout | null {
 }
 
 // ============================================================================================
-/// <summary>
-/// Classify a byte according to the layout of the JPEG
-/// </summary>
-/// <param name="offset">The offset of the byte</param>
-/// <param name="layout">The layout of the JPEG</param>
-/// <returns>The region of the byte</returns>
+/**
+ * Classify a byte according to the layout of the JPEG
+ * @param {number} offset - The offset of the byte
+ * @param {JpegLayout | null} layout - The layout of the JPEG
+ * @returns {ByteRegion} The region of the byte
+ */
 export function classifyByte(offset: number, layout: JpegLayout | null): ByteRegion {
     if (!layout || offset < 0 || offset >= layout.length) {
         return 'unknown';
@@ -178,12 +184,12 @@ export function classifyByte(offset: number, layout: JpegLayout | null): ByteReg
 }
 
 // ============================================================================================
-/// <summary>
-/// Read a segment from the JPEG
-/// </summary>
-/// <param name="bytes">The bytes of the JPEG</param>
-/// <param name="markerStart">The start of the marker</param>
-/// <returns>The segment</returns>
+/**
+ * Read a segment from the JPEG
+ * @param {Uint8Array} bytes - The bytes of the JPEG
+ * @param {number} markerStart - The start of the marker
+ * @returns {{ headerEnd: number; segmentEnd: number } | null} The segment
+ */
 function readSegment(bytes: Uint8Array, markerStart: number): { headerEnd: number; segmentEnd: number } | null {
     const len = bytes.length;
     if (markerStart + 3 >= len) return null;
@@ -198,11 +204,11 @@ function readSegment(bytes: Uint8Array, markerStart: number): { headerEnd: numbe
 }
 
 // ============================================================================================
-/// <summary>
-/// Check if a marker is a SOF marker
-/// </summary>
-/// <param name="marker">The marker to check</param>
-/// <returns>True if the marker is a SOF marker, false otherwise</returns>
+/**
+ * Check if a marker is a SOF marker
+ * @param {number} marker - The marker to check
+ * @returns {boolean} True if the marker is a SOF marker, false otherwise
+ */
 function isSofMarker(marker: number): boolean {
     // SOF0–SOF15 (FF C0 – FF CF) excluding:
     //  - FF C4 (DHT)
@@ -211,13 +217,13 @@ function isSofMarker(marker: number): boolean {
 }
 
 // ============================================================================================
-/// <summary>
-/// Consume scan data from the JPEG
-/// </summary>
-/// <param name="bytes">The bytes of the JPEG</param>
-/// <param name="regions">The regions of the JPEG</param>
-/// <param name="start">The start of the scan data</param>
-/// <returns>The end of the scan data</returns>
+/**
+ * Consume scan data from the JPEG
+ * @param {Uint8Array} bytes - The bytes of the JPEG
+ * @param {Uint8Array} regions - The regions of the JPEG
+ * @param {number} start - The start of the scan data
+ * @returns {number} The end of the scan data
+ */
 function consumeScanData(bytes: Uint8Array, regions: Uint8Array, start: number): number {
     const len = bytes.length;
     let i = start;
@@ -268,13 +274,13 @@ function consumeScanData(bytes: Uint8Array, regions: Uint8Array, start: number):
 }
 
 // ============================================================================================
-/// <summary>
-/// Mark a range of bytes in the JPEG
-/// </summary>
-/// <param name="regions">The regions of the JPEG</param>
-/// <param name="start">The start of the range</param>
-/// <param name="end">The end of the range</param>
-/// <param name="code">The code to mark the range with</returns>
+/**
+ * Mark a range of bytes in the JPEG
+ * @param {Uint8Array} regions - The regions of the JPEG
+ * @param {number} start - The start of the range
+ * @param {number} end - The end of the range
+ * @param {RegionCode} code - The code to mark the range with
+ */
 function markRange(regions: Uint8Array, start: number, end: number, code: RegionCode): void {
     if (start < 0 || end > regions.length) return;
     const len = regions.length;
@@ -286,12 +292,12 @@ function markRange(regions: Uint8Array, start: number, end: number, code: Region
 }
 
 // ============================================================================================
-/// <summary>
+/**
 /// Mark a byte in the JPEG
-/// </summary>
-/// <param name="regions">The regions of the JPEG</param>
-/// <param name="index">The index of the byte</param>
-/// <param name="code">The code to mark the byte with</returns>
+ * @param {Uint8Array} regions - The regions of the JPEG
+ * @param {number} index - The index of the byte
+ * @param {RegionCode} code - The code to mark the byte with
+ */
 function markByte(regions: Uint8Array, index: number, code: RegionCode): void {
     if (index >= 0 && index < regions.length) {
         regions[index] = code;
@@ -299,11 +305,11 @@ function markByte(regions: Uint8Array, index: number, code: RegionCode): void {
 }
 
 // ============================================================================================
-/// <summary>
-/// Convert a region code to a region name
-/// </summary>
-/// <param name="code">The code to convert</param>
-/// <returns>The region name</returns>
+/**
+ * Convert a region code to a region name
+ * @param {number} code - The code to convert
+ * @returns {string} The region name
+ */
 function codeToRegion(code: number): ByteRegion {
     switch (code) {
         case RegionCode.Soi: return 'soi';
@@ -324,31 +330,31 @@ function codeToRegion(code: number): ByteRegion {
 }
 
 // ============================================================================================
-/// <summary>
-/// Convert a byte to a hex string
-/// </summary>
-/// <param name="value">The byte to convert</param>
-/// <returns>The hex string</returns>
+/**
+ * Convert a byte to a hex string
+ * @param {number} value - The byte to convert
+ * @returns {string} The hex string
+ */
 export function byteToHex(value: number): string {
     return value.toString(16).padStart(2, '0').toUpperCase();
 }
 
 // ============================================================================================
-/// <summary>
-/// Convert an offset to a hex string
-/// </summary>
-/// <param name="offset">The offset to convert</param>
-/// <returns>The hex string</returns>
+/**
+ * Convert an offset to a hex string
+ * @param {number} offset - The offset to convert
+ * @returns {string} The hex string
+ */
 export function offsetToHex(offset: number): string {
     return offset.toString(16).padStart(8, '0').toUpperCase();
 }
 
 // ============================================================================================
-/// <summary>
-/// Convert a byte to an ASCII string
-/// </summary>
-/// <param name="value">The byte to convert</param>
-/// <returns>The ASCII string</returns>
+/**
+ * Convert a byte to an ASCII string
+ * @param {number} value - The byte to convert
+ * @returns {string} The ASCII string
+ */
 export function byteToAscii(value: number): string {
     if (value >= 0x20 && value <= 0x7e) {
         const ch = String.fromCharCode(value);

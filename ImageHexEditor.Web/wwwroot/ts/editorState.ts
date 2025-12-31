@@ -1,16 +1,11 @@
+/**
+ * editorState.ts
+ * @fileoverview Hex editor state management and undo/redo history
+ * @description Manages file bytes, history stack, and editor cursor position
+ */
+
 import { analyzeJpeg, JpegLayout } from './jpegStructure';
 
-// ============================================================================================
-/// <summary>
-/// The state of the editor
-/// </summary>
-/// <param name="bytes">The bytes of the file</param>
-/// <param name="fileName">The name of the file</param>
-/// <param name="fileSize">The size of the file</param>
-/// <param name="layout">The layout of the file</param>
-/// <param name="activeOffset">The active offset</param>
-/// <param name="history">The history of the file</param>
-/// <param name="historyIndex">The index of the history</param>
 export interface EditorState {
     bytes: Uint8Array | null;
     fileName: string | null;
@@ -22,10 +17,10 @@ export interface EditorState {
 }
 
 // ============================================================================================
-/// <summary>
-/// Create an empty state
-/// </summary>
-/// <returns>The empty state</returns>
+/**
+ * Create an empty state
+ * @returns {EditorState} The empty state
+ */
 export function createEmptyState(): EditorState {
     return {
         bytes: null,
@@ -39,13 +34,13 @@ export function createEmptyState(): EditorState {
 }
 
 // ============================================================================================
-/// <summary>
-/// Load a new file into the state
-/// </summary>
-/// <param name="state">The state to load the file into</param>
-/// <param name="buffer">The buffer containing the file data</param>
-/// <param name="fileName">The name of the file</param>
-/// <returns>The loaded file</returns>
+/**
+ * Load a new photo into the state
+ * @param {EditorState} state - The state to load the photo into
+ * @param {ArrayBuffer} buffer - The buffer containing the photo data
+ * @param {string | null} fileName - The name of the photo
+ * @returns {void} The loaded photo
+ */
 export function loadNewFile(state: EditorState, buffer: ArrayBuffer, fileName: string | null): void {
     const nextBytes = new Uint8Array(buffer);
     pushSnapshot(state, nextBytes, fileName);
@@ -53,12 +48,12 @@ export function loadNewFile(state: EditorState, buffer: ArrayBuffer, fileName: s
 }
 
 // ============================================================================================
-/// <summary>
-/// Apply an edit to the state
-/// </summary>
-/// <param name="state">The state to apply the edit to</param>
-/// <param name="mutator">The mutator function to apply the edit</param>
-/// <returns>The edited state</returns>
+/**
+ * Apply a byte-by-byte edit to the state
+ * @param {EditorState} state - The state to apply the edit to
+ * @param {function(Uint8Array): void} mutator - The mutator function to apply the edit
+ * @returns {void} The edited state
+ */
 export function applyEdit(state: EditorState, mutator: (draft: Uint8Array) => void): void {
     if (!state.bytes) return;
     const draft = new Uint8Array(state.bytes);
@@ -67,13 +62,13 @@ export function applyEdit(state: EditorState, mutator: (draft: Uint8Array) => vo
 }
 
 // ============================================================================================
-/// <summary>
-/// Apply an insert to the state
-/// </summary>
-/// <param name="state">The state to apply the insert to</param>
-/// <param name="offset">The offset to insert the data at</param>
-/// <param name="insert">The data to insert</param>
-/// <returns>The inserted state</returns>
+/**
+ * Insert bytes at a specified offset pos into the state
+ * @param {EditorState} state - The state to apply the insert to
+ * @param {number} offset - The offset to insert the data at
+ * @param {Uint8Array} insert - The data to insert
+ * @returns {void} The inserted state
+ */
 export function applyInsert(state: EditorState, offset: number, insert: Uint8Array): void {
     if (!state.bytes || insert.length === 0) return;
     const src = state.bytes;
@@ -87,31 +82,31 @@ export function applyInsert(state: EditorState, offset: number, insert: Uint8Arr
 }
 
 // ============================================================================================
-/// <summary>
-/// Check if the state can be undone
-/// </summary>
-/// <param name="state">The state to check</param>
-/// <returns>True if the state can be undone, false otherwise</returns>
+/**
+ * Check if the state can be undone
+ * @param {EditorState} state - The state to check
+ * @returns {boolean} True if the state can be undone, false otherwise
+ */
 export function canUndo(state: EditorState): boolean {
     return state.historyIndex > 0;
 }
 
 // ============================================================================================
-/// <summary>
-/// Check if the state can be redone
-/// </summary>
-/// <param name="state">The state to check</param>
-/// <returns>True if the state can be redone, false otherwise</returns>
+/**
+ * Check if the state can be redone
+ * @param {EditorState} state - The state to check
+ * @returns {boolean} True if the state can be redone, false otherwise
+ */
 export function canRedo(state: EditorState): boolean {
     return state.historyIndex >= 0 && state.historyIndex < state.history.length - 1;
 }
 
 // ============================================================================================
-/// <summary>
-/// Undo the last action
-/// </summary>
-/// <param name="state">The state to undo</param>
-/// <returns>True if the undo was successful, false otherwise</returns>
+/**
+ * Undo the last editor action
+ * @param {EditorState} state - The state to undo
+ * @returns {boolean} True if the undo was successful, false otherwise
+ */
 export function undo(state: EditorState): boolean {
     if (!canUndo(state)) return false;
     state.historyIndex -= 1;
@@ -120,11 +115,11 @@ export function undo(state: EditorState): boolean {
 }
 
 // ============================================================================================
-/// <summary>
-/// Redo the last action
-/// </summary>
-/// <param name="state">The state to redo</param>
-/// <returns>True if the redo was successful, false otherwise</returns>
+/**
+ * Redo the last editor action
+ * @param {EditorState} state - The state to redo
+ * @returns {boolean} True if the redo was successful, false otherwise
+ */
 export function redo(state: EditorState): boolean {
     if (!canRedo(state)) return false;
     state.historyIndex += 1;
@@ -133,12 +128,12 @@ export function redo(state: EditorState): boolean {
 }
 
 // ============================================================================================
-/// <summary>
-/// Set the active offset
-/// </summary>
-/// <param name="state">The state to set the active offset for</param>
-/// <param name="offset">The offset to set</param>
-/// <returns>The set state</returns>
+/**
+ * Set the active offset
+ * @param {EditorState} state - The state to set the active offset for
+ * @param {number} offset - The offset to set
+ * @returns {void} The set state
+ */
 export function setActiveOffset(state: EditorState, offset: number): void {
     if (!state.bytes || state.bytes.length === 0) {
         state.activeOffset = 0;
@@ -149,12 +144,13 @@ export function setActiveOffset(state: EditorState, offset: number): void {
 }
 
 // ============================================================================================
-/// <summary>
-/// Push a snapshot of the state to the history
-/// </summary>
-/// <param name="state">The state to push the snapshot to</param>
-/// <param name="bytes">The bytes to push</param>
-/// <param name="fileName">The name of the file</param>
+/**
+ * Push a snapshot of the state to the history
+ * @param {EditorState} state - The state to push the snapshot to
+ * @param {Uint8Array} bytes - The bytes to push
+ * @param {string | null} fileName - The name of the file
+ * @returns {void} The pushed state
+ */
 function pushSnapshot(state: EditorState, bytes: Uint8Array, fileName: string | null): void {
     const snapshot = new Uint8Array(bytes);
     state.bytes = snapshot;
@@ -175,11 +171,11 @@ function pushSnapshot(state: EditorState, bytes: Uint8Array, fileName: string | 
 }
 
 // ============================================================================================
-/// <summary>
-/// Restore the state from the history
-/// </summary>
-/// <param name="state">The state to restore</param>
-/// <returns>The restored state</returns>
+/**
+ * Restore the state from the history
+ * @param {EditorState} state - The state to restore
+ * @returns {void} The restored state
+ */
 function restoreFromHistory(state: EditorState): void {
     const current = state.history[state.historyIndex];
     state.bytes = new Uint8Array(current);
