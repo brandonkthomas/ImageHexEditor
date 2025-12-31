@@ -1,13 +1,14 @@
 .ix-page {
-    min-height: 100vh;
-    padding: 5rem 1.25rem 3rem;
-    margin: 0 auto;
-    box-sizing: border-box;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", monospace;
-    max-width: 1200px;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    min-height: 100vh;
+    padding: 5rem 1.25rem 3rem;
+    margin: 0 auto;
+    gap: 1.5rem;
+    box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", monospace;
+    max-width: 1200px;
 }
 
 .ix-card {
@@ -233,6 +234,15 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 0.75rem;
     overflow: hidden;
+}
+
+.ix-editor-options {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .ix-drop-hint {

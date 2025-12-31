@@ -58,8 +58,9 @@ function initImageHexEditor() {
     const metaDimensions = document.getElementById('ix-meta-dimensions') as HTMLElement | null;
     const downloadBtn = document.getElementById('ix-download-btn') as HTMLButtonElement | null;
     const uploadNewBtn = document.getElementById('ix-upload-new-btn') as HTMLButtonElement | null;
+    const autoAdvanceInput = document.getElementById('ix-auto-advance-toggle') as HTMLInputElement | null;
 
-    if (!gridEl || !mainEl || !toolbarEl || !uploadEl || !dropzone || !fileInput || !undoBtn || !redoBtn || !findBtn || !insertBtn || !jumpBtn || !statusEl || !editorStatusEl || !previewImg || !previewThrobber || !previewZoomBtn || !metaFilename || !metaSize || !metaDimensions || !downloadBtn || !uploadNewBtn || !jumpMenu || !jumpMenuBody || !jumpCloseBtn) {
+    if (!gridEl || !mainEl || !toolbarEl || !uploadEl || !dropzone || !fileInput || !undoBtn || !redoBtn || !findBtn || !insertBtn || !jumpBtn || !statusEl || !editorStatusEl || !previewImg || !previewThrobber || !previewZoomBtn || !metaFilename || !metaSize || !metaDimensions || !downloadBtn || !uploadNewBtn || !jumpMenu || !jumpMenuBody || !jumpCloseBtn || !autoAdvanceInput) {
         console.error('[ImageHexEditor] Missing required DOM elements, aborting init.');
         return;
     }
@@ -80,7 +81,8 @@ function initImageHexEditor() {
             setActiveOffset(state, offset);
             syncToolbar();
             syncStatusForCaret();
-        }
+        },
+        isAutoAdvanceEnabled: () => autoAdvanceInput?.checked ?? true
     });
 
     let previewUrl: string | null = null;

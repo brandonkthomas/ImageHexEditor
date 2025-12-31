@@ -6,9 +6,14 @@ import { ByteRegion, byteToAscii, byteToHex, classifyByte, JpegLayout, offsetToH
 /// </summary>
 /// <param name="onEditByte">The callback to edit a byte</param>
 /// <param name="onMoveCaret">The callback to move the caret</param>
+/// <param name="isAutoAdvanceEnabled">
+///     Optional callback to determine whether the caret should auto-advance
+///     after completing a byte edit. Defaults to true when omitted.
+/// </param>
 export interface HexGridOptions {
     onEditByte?: (offset: number, nextValue: number) => void;
     onMoveCaret?: (offset: number) => void;
+    isAutoAdvanceEnabled?: () => boolean;
 }
 
 // ============================================================================================
@@ -305,6 +310,20 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     }
 
     // ============================================================================================
+    function isAutoAdvanceOnEdit(): boolean {
+        if (typeof opts.isAutoAdvanceEnabled === 'function') {
+            try {
+                return !!opts.isAutoAdvanceEnabled();
+            } catch {
+                // If the callback throws for any reason, fall back to the
+                // default auto-advance behavior so the editor remains usable.
+                return true;
+            }
+        }
+        return true;
+    }
+
+    // ============================================================================================
     function handleKeyDown(ev: KeyboardEvent): void {
         if (!bytes || bytes.length === 0) return;
 
@@ -384,8 +403,10 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
                 const nextValue = ((pendingNibble << 4) | hex) & 0xff;
                 pendingNibble = null;
                 opts.onEditByte?.(activeOffset, nextValue);
-                // After fully specifying a byte, automatically advance to the next one.
-                moveCaret(1);
+                // After fully specifying a byte, optionally advance to the next one.
+                if (isAutoAdvanceOnEdit()) {
+                    moveCaret(1);
+                }
             }
         }
     }

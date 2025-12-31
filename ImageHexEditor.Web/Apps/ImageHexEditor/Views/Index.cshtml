@@ -82,6 +82,15 @@
                         </div>
                         <div class="ix-grid-body" id="ix-grid" tabindex="0" aria-label="Hex editor"></div>
                     </div>
+                    <div class="ix-editor-options">
+                        <label class="comp-toggle">
+                            <input type="checkbox" id="ix-auto-advance-toggle" class="comp-toggle-input" checked />
+                            <span class="comp-toggle-track" aria-hidden="true">
+                                <span class="comp-toggle-thumb"></span>
+                            </span>
+                            <span class="ix-toggle-text">Auto-advance to next byte after edit</span>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -129,6 +138,7 @@
 </section>
 
 @section Styles {
+    <link rel="stylesheet" href="~/css/components/toggleSwitch.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/apps/imagehexeditor/css/imagehexeditor.css" asp-append-version="true" />
 }
 
