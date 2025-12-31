@@ -7,7 +7,7 @@
     max-width: 1200px;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    justify-content: center;
 }
 
 .ix-card {
@@ -21,6 +21,19 @@
     padding: 1.25rem;
     color: rgba(255, 255, 255, 0.92);
     position: relative;
+}
+
+.ix-page-initial {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* When the main editor is hidden (initial state), allow the upload area to
+   take up remaining vertical space and center itself within the page. */
+.ix-page:has(#ix-main[hidden]) .ix-page-initial {
+    flex: 1 1 auto;
+    justify-content: center;
 }
 
 .ix-header {
@@ -68,6 +81,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding-top: 1rem;
 }
 
 .ix-dropzone {
@@ -590,6 +604,61 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.ix-preview-zoom-btn {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    z-index: 2;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(10, 10, 14, 0.82);
+    backdrop-filter: blur(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.75),
+        0 0 0 1px rgba(0, 0, 0, 0.6);
+    transition:
+        background 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease,
+        transform 80ms ease;
+}
+
+.ix-preview-zoom-btn:hover:not(:disabled) {
+    background: rgba(22, 22, 30, 0.96);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow:
+        0 14px 34px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(0, 0, 0, 0.7);
+    transform: translateY(-1px);
+}
+
+.ix-preview-zoom-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(0, 0, 0, 0.65);
+}
+
+.ix-preview-zoom-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    box-shadow: none;
+}
+
+.ix-preview-zoom-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    filter: brightness(0) invert(1);
+    pointer-events: none;
 }
 
 .ix-preview-throbber {

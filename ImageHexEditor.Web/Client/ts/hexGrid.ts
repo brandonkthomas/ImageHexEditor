@@ -1,16 +1,36 @@
 import { ByteRegion, byteToAscii, byteToHex, classifyByte, JpegLayout, offsetToHex } from './jpegStructure';
 
+// ============================================================================================
+/// <summary>
+/// The hex grid options
+/// </summary>
+/// <param name="onEditByte">The callback to edit a byte</param>
+/// <param name="onMoveCaret">The callback to move the caret</param>
 export interface HexGridOptions {
     onEditByte?: (offset: number, nextValue: number) => void;
     onMoveCaret?: (offset: number) => void;
 }
 
+// ============================================================================================
+/// <summary>
+/// The hex grid interface
+/// </summary>
+/// <param name="setData">Set the data for the grid</param>
+/// <param name="setActiveOffset">Set the active offset for the grid</param>
+/// <param name="getActiveOffset">Get the active offset for the grid</returns>
 export interface HexGrid {
     setData(bytes: Uint8Array | null, layout: JpegLayout | null, activeOffset: number): void;
     setActiveOffset(offset: number, centerIntoView?: boolean): void;
     getActiveOffset(): number;
 }
 
+// ============================================================================================
+/// <summary>
+/// Create a new hex grid
+/// </summary>
+/// <param name="root">The root element to mount the grid into</param>
+/// <param name="opts">The options for the grid</param>
+/// <returns>The created hex grid</returns>
 export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid {
     root.classList.add('ix-grid-body');
     root.tabIndex = 0;
@@ -27,6 +47,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     let firstVisibleRow = 0;
     let rowHeight = 0; // measured in pixels once we have a row
 
+    // ============================================================================================
     function ensureActiveOffset(): void {
         if (!bytes || renderLength === 0) {
             activeOffset = 0;
@@ -36,6 +57,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         if (activeOffset >= renderLength) activeOffset = renderLength - 1;
     }
 
+    // ============================================================================================
     function regionClass(region: ByteRegion): string {
         switch (region) {
             case 'soi': return 'ix-byte--soi';
@@ -55,6 +77,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         }
     }
 
+    // ============================================================================================
     function clampFirstVisibleRow(row: number): number {
         if (totalRows <= VISIBLE_ROWS) return 0;
         const maxStart = totalRows - VISIBLE_ROWS;
@@ -63,6 +86,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         return row;
     }
 
+    // ============================================================================================
     function buildRow(row: number): HTMLDivElement {
         const rowStart = row * BYTES_PER_ROW;
         const totalLength = renderLength;
@@ -129,6 +153,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         return rowEl;
     }
 
+    // ============================================================================================
     function ensureRowHeight(): void {
         if (rowHeight > 0 || !bytes || renderLength === 0) return;
 
@@ -140,6 +165,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         rowHeight = rect.height || 18;
     }
 
+    // ============================================================================================
     function renderWindow(): void {
         root.innerHTML = '';
 
@@ -177,6 +203,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         root.appendChild(fragment);
     }
 
+    // ============================================================================================
     function ensureVisibleForActive(centerIntoView: boolean): void {
         if (!bytes || renderLength === 0 || totalRows === 0) {
             firstVisibleRow = 0;
@@ -184,13 +211,41 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
             return;
         }
 
+        // Ensure we know the row height so we can relate scrollTop to a row index.
+        ensureRowHeight();
+
         const activeRow = Math.floor(activeOffset / BYTES_PER_ROW);
+
+        // If we can approximate the viewport and the active row is already visible,
+        // avoid changing scroll position – just refresh the window so highlighting
+        // stays in sync.
+        if (rowHeight > 0 && root.clientHeight > 0) {
+            const approxTopRow = Math.floor(root.scrollTop / rowHeight);
+            const visibleRowCount = Math.max(1, Math.round(root.clientHeight / rowHeight));
+            const approxBottomRow = approxTopRow + visibleRowCount - 1;
+
+            if (activeRow >= approxTopRow && activeRow <= approxBottomRow) {
+                firstVisibleRow = clampFirstVisibleRow(approxTopRow);
+                renderWindow();
+                return;
+            }
+        }
 
         let targetFirst = firstVisibleRow;
         if (centerIntoView) {
-            const half = Math.floor(VISIBLE_ROWS / 2);
-            targetFirst = clampFirstVisibleRow(activeRow - half);
+            // Try to center within the actual viewport when possible; otherwise
+            // fall back to the virtual window height.
+            if (rowHeight > 0 && root.clientHeight > 0) {
+                const visibleRowCount = Math.max(1, Math.round(root.clientHeight / rowHeight));
+                const half = Math.floor(visibleRowCount / 2);
+                targetFirst = clampFirstVisibleRow(activeRow - half);
+            } else {
+                const half = Math.floor(VISIBLE_ROWS / 2);
+                targetFirst = clampFirstVisibleRow(activeRow - half);
+            }
         } else {
+            // Keep the active row within the virtual window without forcing
+            // a full recenter.
             if (activeRow < firstVisibleRow) {
                 targetFirst = activeRow;
             } else if (activeRow >= firstVisibleRow + VISIBLE_ROWS) {
@@ -203,13 +258,14 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         renderWindow();
 
         // Once rows are rendered and we know rowHeight, adjust scrollTop so
-        // the active row is centered in the viewport.
+        // the active row is centered in the viewport when requested.
         if (rowHeight > 0 && centerIntoView) {
             const desiredScrollTop = firstVisibleRow * rowHeight;
             root.scrollTop = desiredScrollTop;
         }
     }
 
+    // ============================================================================================
     function resetDisplayForOffset(offset: number): void {
         if (!bytes || offset < 0 || offset >= renderLength) return;
         const value = bytes[offset];
@@ -219,6 +275,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         if (ascii) ascii.textContent = byteToAscii(value);
     }
 
+    // ============================================================================================
     function showPendingNibble(firstNibble: number): void {
         if (!bytes || renderLength === 0) return;
         const current = bytes[activeOffset];
@@ -234,6 +291,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         }
     }
 
+    // ============================================================================================
     function moveCaret(delta: number): void {
         if (!bytes || renderLength === 0) return;
         const prevOffset = activeOffset;
@@ -246,6 +304,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         opts.onMoveCaret?.(activeOffset);
     }
 
+    // ============================================================================================
     function handleKeyDown(ev: KeyboardEvent): void {
         if (!bytes || bytes.length === 0) return;
 
@@ -331,6 +390,7 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         }
     }
 
+    // ============================================================================================
     function parseHexKey(key: string): number | null {
         if (key.length !== 1) return null;
         if (key >= '0' && key <= '9') return key.charCodeAt(0) - 48;
@@ -408,7 +468,3 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
         }
     };
 }
-
-
-
-

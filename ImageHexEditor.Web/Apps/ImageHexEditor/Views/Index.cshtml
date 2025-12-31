@@ -3,28 +3,30 @@
 }
 
 <section class="ix-page">
-    <header class="ix-header">
-        <div class="ix-header-main">
-            <div class="ix-title">
-                <span class="ix-title-main">Image Hex Editor</span>
-                <span class="ix-title-sub">Directly edit the bytes of a JPEG image.</span>
-            </div>
-        </div>
-        <div class="ix-header-actions">
-            <input id="ix-file-input" type="file" accept="image/jpeg,image/jpg" hidden />
-        </div>
-    </header>
-
-    <div class="ix-upload" id="ix-upload">
-        <div class="ix-dropzone" id="ix-dropzone">
-            <div class="ix-drop-inner">
-                <div class="ix-drop-text">
-                    <span class="ix-drop-text--desktop">Drag &amp; drop or click to upload</span>
-                    <span class="ix-drop-text--mobile" aria-hidden="true">Tap to Upload</span>
+    <div class="ix-page-initial">
+        <header class="ix-header">
+            <div class="ix-header-main">
+                <div class="ix-title">
+                    <span class="ix-title-main">Image Hex Editor</span>
+                    <span class="ix-title-sub">Directly edit the bytes of a JPEG image.</span>
                 </div>
             </div>
+            <div class="ix-header-actions">
+                <input id="ix-file-input" type="file" accept="image/jpeg,image/jpg" hidden />
+            </div>
+        </header>
+
+        <div class="ix-upload" id="ix-upload">
+            <div class="ix-dropzone" id="ix-dropzone">
+                <div class="ix-drop-inner">
+                    <div class="ix-drop-text">
+                        <span class="ix-drop-text--desktop">Drag &amp; drop or click to upload</span>
+                        <span class="ix-drop-text--mobile" aria-hidden="true">Tap to Upload</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ix-status" id="ix-status" aria-live="polite"></div>
         </div>
-        <div class="ix-status" id="ix-status" aria-live="polite"></div>
     </div>
 
     <div class="ix-layout" id="ix-main" hidden>
@@ -92,6 +94,9 @@
                         <div id="ix-preview-throbber" class="ix-preview-throbber" aria-hidden="true">
                             <img src="/assets/svg/throbber-ring-indef.svg" alt="" class="ix-preview-throbber-image" />
                         </div>
+                        <button id="ix-preview-zoom-btn" type="button" class="ix-preview-zoom-btn" aria-label="Open full-screen preview">
+                            <img src="~/apps/imagehexeditor/assets/svg/magnify-outline.svg" asp-append-version="true" alt="" class="ix-preview-zoom-icon" />
+                        </button>
                     </div>
                     <dl class="ix-meta">
                         <div class="ix-meta-row">

@@ -1,6 +1,7 @@
 import { createEmptyState, applyEdit, applyInsert, canRedo, canUndo, loadNewFile, redo, setActiveOffset, undo } from './editorState';
 import { createHexGrid } from './hexGrid';
 import { byteToHex, classifyByte } from './jpegStructure';
+import PhotoLightbox from '../../../../../wwwroot/ts/photoLightbox';
 
 // To avoid excessive memory / CPU usage, cap the file size we actively keep and render.
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -48,6 +49,7 @@ function initImageHexEditor() {
     const editorStatusEl = document.getElementById('ix-editor-status') as HTMLElement | null;
     const previewImg = document.getElementById('ix-preview-image') as HTMLImageElement | null;
     const previewThrobber = document.getElementById('ix-preview-throbber') as HTMLElement | null;
+    const previewZoomBtn = document.getElementById('ix-preview-zoom-btn') as HTMLButtonElement | null;
     const jumpMenu = document.getElementById('ix-jump-menu') as HTMLElement | null;
     const jumpMenuBody = document.getElementById('ix-jump-menu-body') as HTMLElement | null;
     const jumpCloseBtn = document.getElementById('ix-jump-close-btn') as HTMLButtonElement | null;
@@ -57,10 +59,13 @@ function initImageHexEditor() {
     const downloadBtn = document.getElementById('ix-download-btn') as HTMLButtonElement | null;
     const uploadNewBtn = document.getElementById('ix-upload-new-btn') as HTMLButtonElement | null;
 
-    if (!gridEl || !mainEl || !toolbarEl || !uploadEl || !dropzone || !fileInput || !undoBtn || !redoBtn || !findBtn || !insertBtn || !jumpBtn || !statusEl || !editorStatusEl || !previewImg || !previewThrobber || !metaFilename || !metaSize || !metaDimensions || !downloadBtn || !uploadNewBtn || !jumpMenu || !jumpMenuBody || !jumpCloseBtn) {
+    if (!gridEl || !mainEl || !toolbarEl || !uploadEl || !dropzone || !fileInput || !undoBtn || !redoBtn || !findBtn || !insertBtn || !jumpBtn || !statusEl || !editorStatusEl || !previewImg || !previewThrobber || !previewZoomBtn || !metaFilename || !metaSize || !metaDimensions || !downloadBtn || !uploadNewBtn || !jumpMenu || !jumpMenuBody || !jumpCloseBtn) {
         console.error('[ImageHexEditor] Missing required DOM elements, aborting init.');
         return;
     }
+
+    // Zoom button is only enabled once a valid preview image is available.
+    previewZoomBtn.disabled = true;
 
     const state = createEmptyState();
     const grid = createHexGrid(gridEl, {
@@ -84,6 +89,8 @@ function initImageHexEditor() {
     let jumpMenuOpen = false;
     let regionCounts: Record<RegionId, number> = Object.create(null);
     let regionOffsets: Record<RegionId, number[]> = Object.create(null);
+    let previewLightboxHost: HTMLElement | null = null;
+    let previewLightbox: PhotoLightbox | null = null;
 
     function humanSize(bytes: number): string {
         if (bytes < 1024) return `${bytes} bytes`;
@@ -100,6 +107,84 @@ function initImageHexEditor() {
 
     function setEditorStatus(message: string): void {
         editorStatusEl!.textContent = message;
+    }
+
+    function ensurePreviewLightboxHost(): HTMLElement {
+        if (previewLightboxHost && previewLightboxHost.isConnected) {
+            return previewLightboxHost;
+        }
+
+        const host = document.createElement('div');
+        host.dataset.photoLightboxId = 'ix-preview-single';
+        host.style.display = 'none';
+
+        document.body.appendChild(host);
+        previewLightboxHost = host;
+        return host;
+    }
+
+    function syncPreviewLightboxSourceFromImage(): void {
+        if (!previewImg || !previewImg.src) return;
+
+        const host = ensurePreviewLightboxHost();
+        const src = previewImg.src;
+        const width = previewImg.naturalWidth || 1600;
+        const height = previewImg.naturalHeight || 900;
+        const alt = previewImg.alt || 'JPEG preview';
+
+        let trigger = host.querySelector<HTMLButtonElement>('[data-photo-lightbox-width]');
+        if (!trigger) {
+            trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.dataset.photoLightboxWidth = `${width}`;
+            trigger.dataset.photoLightboxHeight = `${height}`;
+            trigger.dataset.photoLightboxSrc = src;
+            trigger.setAttribute('aria-label', alt);
+
+            const thumb = document.createElement('img');
+            thumb.src = src;
+            thumb.alt = alt;
+            thumb.decoding = 'async';
+            thumb.loading = 'lazy';
+            trigger.appendChild(thumb);
+
+            host.appendChild(trigger);
+        } else {
+            trigger.dataset.photoLightboxWidth = `${width}`;
+            trigger.dataset.photoLightboxHeight = `${height}`;
+            trigger.dataset.photoLightboxSrc = src;
+
+            let thumb = trigger.querySelector<HTMLImageElement>('img');
+            if (!thumb) {
+                thumb = document.createElement('img');
+                trigger.appendChild(thumb);
+            }
+            thumb.src = src;
+            thumb.alt = alt;
+            thumb.decoding = 'async';
+            thumb.loading = 'lazy';
+        }
+    }
+
+    function openPreviewLightbox(): void {
+        if (!previewImg || !previewImg.src) return;
+
+        syncPreviewLightboxSourceFromImage();
+        const host = previewLightboxHost;
+        if (!host) return;
+
+        if (!previewLightbox) {
+            previewLightbox = new PhotoLightbox({
+                gallery: host,
+                children: '[data-photo-lightbox-width]',
+                loop: false,
+                closeOnBackdrop: true,
+                showCounter: false
+            });
+            previewLightbox.init();
+        }
+
+        previewLightbox.open(0, host);
     }
 
     function recomputeRegionOffsets(): void {
@@ -329,6 +414,7 @@ function initImageHexEditor() {
         downloadBtn!.disabled = !hasBytes;
         uploadNewBtn!.disabled = !hasBytes;
         jumpBtn!.disabled = !hasBytes;
+        previewZoomBtn!.disabled = !hasBytes || !previewImg!.src;
     }
 
     function syncMeta(): void {
@@ -398,11 +484,18 @@ function initImageHexEditor() {
             metaDimensions!.textContent = 'Unknown';
         }
         setPreviewLoading(false);
+        // Now that we have a valid rendered image, enable the zoom control and
+        // synchronize the lightbox source.
+        previewZoomBtn.disabled = !state.bytes || state.bytes.length === 0;
+        if (!previewZoomBtn.disabled) {
+            syncPreviewLightboxSourceFromImage();
+        }
     });
 
     previewImg!.addEventListener('error', () => {
         metaDimensions!.textContent = 'Unreadable / corrupt JPEG';
         setPreviewLoading(false);
+        previewZoomBtn.disabled = true;
     });
 
     function syncView(): void {
@@ -473,6 +566,22 @@ function initImageHexEditor() {
 
     fileInput.addEventListener('change', () => {
         handleFiles(fileInput.files);
+    });
+
+    previewZoomBtn.addEventListener('click', () => {
+        if (previewZoomBtn.disabled) {
+            return;
+        }
+        openPreviewLightbox();
+    });
+
+    // Allow clicking the rendered preview image itself to trigger zoom,
+    // mirroring the behavior of the dedicated zoom button.
+    previewImg.addEventListener('click', () => {
+        if (previewZoomBtn.disabled) {
+            return;
+        }
+        openPreviewLightbox();
     });
 
     const enter = (e: DragEvent) => {
