@@ -394,14 +394,33 @@ export function createHexGrid(root: HTMLElement, opts: HexGridOptions): HexGrid 
     // ============================================================================================
     /**
      * Handle keyboard input for navigation and byte editing.
-     * Arrow keys move the caret, hex digits enter nibbles, Backspace clears to 0x00.
-     * Home/End jump to bounds; Page Up/Down move by page. Pending nibble input is shown visually.
+     * 
+     * - Arrow keys move the caret, hex digits enter nibbles, Backspace clears to 0x00.
+     * - Home/End jump to bounds
+     * - Page Up/Down move by page (pending nibble input is shown visually)
+     * - Alt/Option + ArrowUp/ArrowDown increments/decrements the current byte value by 1 
+     *   without moving the caret
+     *
      * @param {KeyboardEvent} ev - The keyboard event
      */
     function handleKeyDown(ev: KeyboardEvent): void {
         if (!bytes || bytes.length === 0) return;
 
         const key = ev.key;
+
+        // Alt/Option + Up/Down: increment/decrement the current byte value by 1.
+        if ((key === 'ArrowUp' || key === 'ArrowDown') && ev.altKey) {
+            ev.preventDefault();
+            if (pendingNibble !== null) {
+                resetDisplayForOffset(activeOffset);
+                pendingNibble = null;
+            }
+            const current = bytes[activeOffset];
+            const delta = key === 'ArrowUp' ? 1 : -1;
+            const nextValue = (current + delta) & 0xff;
+            opts.onEditByte?.(activeOffset, nextValue);
+            return;
+        }
 
         if (key === 'ArrowLeft') {
             ev.preventDefault();
