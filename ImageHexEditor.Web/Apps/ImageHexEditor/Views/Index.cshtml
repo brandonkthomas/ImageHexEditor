@@ -42,13 +42,13 @@
                         </button>
                     </div>
                     <div class="ix-toolbar-group">
-                        <button id="ix-find-btn" type="button" class="ix-toolbar-btn" title="Find / Replace" disabled>
-                            <img src="~/apps/imagehexeditor/assets/svg/magnify-outline.svg" asp-append-version="true" alt="" class="ix-toolbar-icon" />
-                            @* Find / Replace *@
-                        </button>
-                        <button id="ix-insert-btn" type="button" class="ix-toolbar-btn" title="Insert text" disabled>
-                            <img src="~/apps/imagehexeditor/assets/svg/insert-outline.svg" asp-append-version="true" alt="" class="ix-toolbar-icon" />
-                            @* Insert Text *@
+                        @* <button id="ix-find-btn" type="button" class="ix-toolbar-btn" title="Find / Replace" disabled>
+                            <img src="~/apps/imagehexeditor/assets/svg/find-outline-v2.svg" asp-append-version="true" alt="" class="ix-toolbar-icon" />
+                            Find / Replace
+                        </button> *@
+                        <button id="ix-findreplace-btn" type="button" class="ix-toolbar-btn" title="Find &amp; Replace (with scope)" disabled>
+                            <img src="~/apps/imagehexeditor/assets/svg/find-replace-outline.svg" asp-append-version="true" alt="" class="ix-toolbar-icon" />
+                            @* Find & Replace *@
                         </button>
                         <button id="ix-jump-btn" type="button" class="ix-toolbar-btn" title="Jump to..." disabled>
                             <img src="~/apps/imagehexeditor/assets/svg/jumpto-outline.svg" asp-append-version="true" alt="" class="ix-toolbar-icon" />
@@ -90,6 +90,13 @@
                             </span>
                             <span class="ix-toggle-text">Auto-advance to next byte after edit</span>
                         </label>
+                        <button id="ix-help-btn"
+                                type="button"
+                                class="ix-toolbar-btn ix-toolbar-btn--secondary ix-editor-help-btn"
+                                title="Keyboard shortcuts &amp; help"
+                                aria-label="Show keyboard shortcuts and help">
+                            <b>?</b>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -104,7 +111,7 @@
                             <img src="/assets/svg/throbber-ring-indef.svg" alt="" class="ix-preview-throbber-image" />
                         </div>
                         <button id="ix-preview-zoom-btn" type="button" class="ix-preview-zoom-btn" aria-label="Open full-screen preview">
-                            <img src="~/apps/imagehexeditor/assets/svg/magnify-outline.svg" asp-append-version="true" alt="" class="ix-preview-zoom-icon" />
+                            <img src="~/apps/imagehexeditor/assets/svg/find-outline-v2.svg" asp-append-version="true" alt="" class="ix-preview-zoom-icon" />
                         </button>
                     </div>
                     <dl class="ix-meta">

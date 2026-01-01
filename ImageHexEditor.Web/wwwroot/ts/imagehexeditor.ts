@@ -4,11 +4,12 @@
  * @description Interactive hex editor for viewing/editing JPEG bytes with region markers
  */
 
-import { createEmptyState, applyEdit, applyInsert, canRedo, canUndo, loadNewFile, redo, setActiveOffset, undo } from './editorState';
+import { createEmptyState, applyEdit, canRedo, canUndo, loadNewFile, redo, setActiveOffset, undo } from './editorState';
 import { createHexGrid } from './hexGrid';
 import { byteToHex, classifyByte } from './jpegStructure';
 import PhotoLightbox from '../../../../../wwwroot/ts/components/photoLightbox';
-import { showAlert, showPrompt } from '../../../../../wwwroot/ts/components/dialogs';
+import { showAlert, showPrompt, showConfirm } from '../../../../../wwwroot/ts/components/dialogs';
+import { getOperatingSystem } from '../../../../../wwwroot/ts/common';
 
 // Prevents excessive memory/CPU usage when rendering large files
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -54,8 +55,8 @@ function initImageHexEditor() {
     const fileInput = document.getElementById('ix-file-input') as HTMLInputElement | null;
     const undoBtn = document.getElementById('ix-undo-btn') as HTMLButtonElement | null;
     const redoBtn = document.getElementById('ix-redo-btn') as HTMLButtonElement | null;
-    const findBtn = document.getElementById('ix-find-btn') as HTMLButtonElement | null;
-    const insertBtn = document.getElementById('ix-insert-btn') as HTMLButtonElement | null;
+    // const findBtn = document.getElementById('ix-find-btn') as HTMLButtonElement | null;
+    const insertBtn = document.getElementById('ix-findreplace-btn') as HTMLButtonElement | null;
     const jumpBtn = document.getElementById('ix-jump-btn') as HTMLButtonElement | null;
     const statusEl = document.getElementById('ix-status') as HTMLElement | null;
     const editorStatusEl = document.getElementById('ix-editor-status') as HTMLElement | null;
@@ -71,8 +72,9 @@ function initImageHexEditor() {
     const downloadBtn = document.getElementById('ix-download-btn') as HTMLButtonElement | null;
     const uploadNewBtn = document.getElementById('ix-upload-new-btn') as HTMLButtonElement | null;
     const autoAdvanceInput = document.getElementById('ix-auto-advance-toggle') as HTMLInputElement | null;
+    const helpBtn = document.getElementById('ix-help-btn') as HTMLButtonElement | null;
 
-    if (!gridEl || !mainEl || !toolbarEl || !uploadEl || !dropzone || !fileInput || !undoBtn || !redoBtn || !findBtn || !insertBtn || !jumpBtn || !statusEl || !editorStatusEl || !previewImg || !previewThrobber || !previewZoomBtn || !metaFilename || !metaSize || !metaDimensions || !downloadBtn || !uploadNewBtn || !jumpMenu || !jumpMenuBody || !jumpCloseBtn || !autoAdvanceInput) {
+    if (!gridEl || !mainEl || !toolbarEl || !uploadEl || !dropzone || !fileInput || !undoBtn || !redoBtn || /* !findBtn || */  !insertBtn || !jumpBtn || !statusEl || !editorStatusEl || !previewImg || !previewThrobber || !previewZoomBtn || !metaFilename || !metaSize || !metaDimensions || !downloadBtn || !uploadNewBtn || !jumpMenu || !jumpMenuBody || !jumpCloseBtn || !autoAdvanceInput || !helpBtn) {
         console.error('[ImageHexEditor] Missing required DOM elements, aborting init.');
         return;
     }
@@ -283,6 +285,49 @@ function initImageHexEditor() {
             counts[def.id] = regionOffsets[def.id]?.length ?? 0;
         }
         regionCounts = counts;
+    }
+
+    // ============================================================================================
+    /**
+     * Get the byte range for the JPEG segment containing the current caret.
+     * Falls back to the entire file if layout information is unavailable.
+     * @returns {{ start: number; end: number; scopeLabel: 'file' | 'segment' }} The range to operate on
+     */
+    function getCurrentReplaceRange(limitToSegment: boolean): { start: number; end: number; scopeLabel: 'file' | 'segment' } {
+        const bytes = state.bytes;
+        if (!bytes || !bytes.length) {
+            return { start: 0, end: 0, scopeLabel: 'file' };
+        }
+
+        if (!limitToSegment) {
+            return { start: 0, end: bytes.length, scopeLabel: 'file' };
+        }
+
+        const layout = state.layout;
+        if (!layout || !layout.regions || layout.length !== layout.regions.length) {
+            return { start: 0, end: bytes.length, scopeLabel: 'file' };
+        }
+
+        const len = layout.length;
+        let offset = state.activeOffset;
+        if (offset < 0 || offset >= len) {
+            offset = 0;
+        }
+
+        const regions = layout.regions;
+        const code = regions[offset];
+
+        let start = offset;
+        let end = offset + 1;
+
+        while (start > 0 && regions[start - 1] === code) {
+            start--;
+        }
+        while (end < len && regions[end] === code) {
+            end++;
+        }
+
+        return { start, end, scopeLabel: 'segment' };
     }
 
     // ============================================================================================
@@ -504,7 +549,7 @@ function initImageHexEditor() {
         const hasBytes = !!state.bytes && state.bytes.length > 0;
         undoBtn!.disabled = !hasBytes || !canUndo(state);
         redoBtn!.disabled = !hasBytes || !canRedo(state);
-        findBtn!.disabled = !hasBytes;
+        // findBtn!.disabled = !hasBytes;
         insertBtn!.disabled = !hasBytes;
         downloadBtn!.disabled = !hasBytes;
         uploadNewBtn!.disabled = !hasBytes;
@@ -797,94 +842,271 @@ function initImageHexEditor() {
         }
     });
 
-    findBtn.addEventListener('click', async () => {
-        if (!state.bytes || state.bytes.length === 0) {
-            setStatus('Load a JPEG before using Find / Replace.');
+    // findBtn.addEventListener('click', async () => {
+    //     if (!state.bytes || state.bytes.length === 0) {
+    //         setStatus('Load a JPEG before using Find / Replace.');
+    //         return;
+    //     }
+
+    //     const findText = await showPrompt({
+    //         title: 'Find Text',
+    //         message: 'Find ASCII text (searches raw bytes).',
+    //         placeholder: 'Text to find',
+    //         defaultValue: '',
+    //         required: true,
+    //         variant: 'info',
+    //         primaryLabel: 'Find',
+    //         secondaryLabel: 'Cancel',
+    //     });
+    //     if (!findText) return;
+
+    //     const replaceText = (await showPrompt({
+    //         title: 'Replace Text',
+    //         message: 'Replace with (leave blank to just select).',
+    //         placeholder: 'Replacement text (optional)',
+    //         defaultValue: '',
+    //         required: false,
+    //         variant: 'default',
+    //         primaryLabel: 'OK',
+    //         secondaryLabel: 'Skip',
+    //     })) ?? '';
+
+    //     const findBytes = patternToBytes(findText);
+    //     if (findBytes.length === 0) return;
+
+    //     const startIndex = 0;
+    //     const haystack = state.bytes;
+    //     const index = indexOfBytes(haystack, findBytes, startIndex);
+    //     if (index === -1) {
+    //         setStatus('Search text not found.');
+    //         return;
+    //     }
+
+    //     if (replaceText.length > 0) {
+    //         const replaceBytes = patternToBytes(replaceText);
+    //         if (replaceBytes.length !== findBytes.length) {
+    //             await showAlert('Replacement text must be the same length as the search text.');
+    //         } else {
+    //             applyEdit(state, (draft) => {
+    //                 draft.set(replaceBytes, index);
+    //             });
+    //             setActiveOffset(state, index);
+    //             syncView();
+    //             return;
+    //         }
+    //     }
+
+    //     setActiveOffset(state, index);
+    //     grid.setActiveOffset(index, true);
+    //     syncToolbar();
+    //     syncStatusForCaret();
+    // });
+
+    insertBtn.addEventListener('click', async () => {
+        if (!state.bytes || !state.bytes.length) {
+            setStatus('Load a JPEG before using Find & Replace.');
             return;
         }
 
         const findText = await showPrompt({
-            title: 'Find text',
-            message: 'Find ASCII text (searches raw bytes).',
-            placeholder: 'Text to find',
+            title: 'Find + Replace Bytes or Text',
+            message: 'Enter ASCII text or a hex pattern (e.g., 02 FF D9).',
+            placeholder: 'Text or hex bytes to find',
             defaultValue: '',
             required: true,
             variant: 'info',
-            primaryLabel: 'Find',
+            primaryLabel: 'Next',
             secondaryLabel: 'Cancel',
         });
         if (!findText) return;
 
-        const replaceText = (await showPrompt({
-            title: 'Replace with',
-            message: 'Replace with (leave blank to just select).',
-            placeholder: 'Replacement text (optional)',
-            defaultValue: '',
-            required: false,
-            variant: 'default',
-            primaryLabel: 'OK',
-            secondaryLabel: 'Skip',
-        })) ?? '';
-
-        const findBytes = textToBytes(findText);
-        if (findBytes.length === 0) return;
-
-        const startIndex = 0;
-        const haystack = state.bytes;
-        const index = indexOfBytes(haystack, findBytes, startIndex);
-        if (index === -1) {
-            setStatus('Search text not found.');
-            return;
-        }
-
-        if (replaceText.length > 0) {
-            const replaceBytes = textToBytes(replaceText);
-            if (replaceBytes.length !== findBytes.length) {
-                await showAlert('Replacement text must be the same length as the search text.');
-            } else {
-                applyEdit(state, (draft) => {
-                    draft.set(replaceBytes, index);
-                });
-                setActiveOffset(state, index);
-                syncView();
-                return;
-            }
-        }
-
-        setActiveOffset(state, index);
-        grid.setActiveOffset(index, true);
-        syncToolbar();
-        syncStatusForCaret();
-    });
-
-    insertBtn.addEventListener('click', async () => {
-        if (!state.bytes) {
-            setStatus('Load a JPEG before inserting text.');
-            return;
-        }
-
-        const text = await showPrompt({
-            title: 'Insert text',
-            message: 'Insert ASCII text at the current offset.',
-            placeholder: 'Text to insert',
+        const replaceText = await showPrompt({
+            title: 'Replace With',
+            message: 'Replacement (ASCII or hex), must be the same length.',
+            placeholder: 'Replacement text or hex bytes',
             defaultValue: '',
             required: true,
             variant: 'success',
-            primaryLabel: 'Insert',
+            primaryLabel: 'Continue',
             secondaryLabel: 'Cancel',
         });
-        if (!text) return;
-        const insertBytes = textToBytes(text);
-        if (insertBytes.length === 0) return;
-        const offset = state.activeOffset;
-        applyInsert(state, offset, insertBytes);
-        setActiveOffset(state, offset);
+        if (!replaceText) return;
+
+        const findBytes = patternToBytes(findText);
+        const replaceBytes = patternToBytes(replaceText);
+        if (findBytes.length === 0) {
+            setStatus('Search text must not be empty.');
+            return;
+        }
+        if (findBytes.length !== replaceBytes.length) {
+            await showAlert('Replacement text must be the same length as the search text.');
+            return;
+        }
+
+        // Scope toggle: entire file vs current JPEG segment
+        const scopeContent = document.createElement('div');
+        scopeContent.className = 'ix-scope-toggle';
+
+        const scopeIntro = document.createElement('p');
+        scopeIntro.textContent = 'Choose where to apply the replacement:';
+        scopeContent.appendChild(scopeIntro);
+
+        const scopeLabel = document.createElement('label');
+        scopeLabel.className = 'comp-toggle';
+
+        const scopeInput = document.createElement('input');
+        scopeInput.type = 'checkbox';
+        scopeInput.className = 'comp-toggle-input';
+        scopeInput.checked = false;
+
+        const scopeTrack = document.createElement('span');
+        scopeTrack.className = 'comp-toggle-track';
+        scopeTrack.setAttribute('aria-hidden', 'true');
+
+        const scopeThumb = document.createElement('span');
+        scopeThumb.className = 'comp-toggle-thumb';
+        scopeTrack.appendChild(scopeThumb);
+
+        const scopeText = document.createElement('span');
+        scopeText.className = 'ix-toggle-text';
+        scopeText.textContent = 'Limit to current JPEG segment only';
+
+        scopeLabel.appendChild(scopeInput);
+        scopeLabel.appendChild(scopeTrack);
+        scopeLabel.appendChild(scopeText);
+        scopeContent.appendChild(scopeLabel);
+
+        const confirmedScope = await showConfirm({
+            title: 'Replace Scope',
+            message: 'Apply replacements to the entire file or only the current segment.',
+            contentNode: scopeContent,
+            primaryLabel: 'Replace',
+            secondaryLabel: 'Cancel',
+            variant: 'info',
+            allowBackdropClose: false,
+        });
+
+        if (!confirmedScope) {
+            return;
+        }
+
+        const limitToSegment = scopeInput.checked;
+        const { start, end, scopeLabel: appliedScope } = getCurrentReplaceRange(limitToSegment);
+
+        if (!state.bytes || !state.bytes.length || start >= end) {
+            setStatus('Nothing to replace in the chosen scope.');
+            return;
+        }
+
+        const positions: number[] = [];
+        const bytes = state.bytes;
+        const needleLen = findBytes.length;
+        const safeStart = Math.max(0, start);
+        const safeEnd = Math.min(end, bytes.length);
+        const maxStart = safeEnd - needleLen;
+
+        for (let i = safeStart; i <= maxStart; ) {
+            let match = true;
+            for (let j = 0; j < needleLen; j++) {
+                if (bytes[i + j] !== findBytes[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                positions.push(i);
+                i += needleLen;
+            } else {
+                i++;
+            }
+        }
+
+        if (positions.length === 0) {
+            setStatus('Search text not found in the chosen scope.');
+            return;
+        }
+
+        applyEdit(state, (draft) => {
+            for (const pos of positions) {
+                draft.set(replaceBytes, pos);
+            }
+        });
+
+        const firstMatchOffset = positions[0];
+        setActiveOffset(state, firstMatchOffset);
         syncView();
+
+        const scopeDescription = appliedScope === 'segment' ? 'current segment' : 'entire file';
+        setStatus(`Replaced ${positions.length} occurrence${positions.length === 1 ? '' : 's'} in the ${scopeDescription}.`);
     });
 
     uploadNewBtn.addEventListener('click', () => {
         fileInput.value = '';
         fileInput.click();
+    });
+
+    helpBtn.addEventListener('click', () => {
+        const content = document.createElement('div');
+        content.className = 'ix-help-content';
+
+        const intro = document.createElement('span');
+        intro.textContent = 'The process of "databending" involves modifying file data with an editor designed to edit other types of files. I created this editor with databending in mind.';
+        content.appendChild(intro);
+
+        const intro2 = document.createElement('p');
+        intro2.textContent = 'Note: Different image viewers may show slight variations in the edited image.';
+        content.appendChild(intro2);
+
+        const os = getOperatingSystem();
+        const altOptionLabel = os === 'macOS' ? 'Option' : 'Alt';
+
+        const table = document.createElement('table');
+        table.className = 'ix-help-table';
+
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const shortcutHeader = document.createElement('th');
+        shortcutHeader.textContent = 'Shortcut';
+        const actionHeader = document.createElement('th');
+        actionHeader.textContent = 'Action';
+        headerRow.appendChild(shortcutHeader);
+        headerRow.appendChild(actionHeader);
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+
+        const rows: Array<[string, string]> = [
+            ['Click byte, Arrows', 'Move caret'],
+            ['Page Up/Down', 'Jump multiple rows'],
+            ['Home/End', 'Go to first / last byte'],
+            ['0-9, A-F', 'Edit current byte in hex'],
+            ['Backspace', 'Cancel edit or set byte to 00'],
+            [`${altOptionLabel} + Up/Down Arrows`, 'Increase / decrease byte by 1']
+        ];
+
+        for (const [shortcut, description] of rows) {
+            const tr = document.createElement('tr');
+            const shortcutCell = document.createElement('td');
+            shortcutCell.className = 'ix-help-key';
+            shortcutCell.textContent = shortcut;
+            const descriptionCell = document.createElement('td');
+            descriptionCell.className = 'ix-help-desc';
+            descriptionCell.textContent = description;
+            tr.appendChild(shortcutCell);
+            tr.appendChild(descriptionCell);
+            tbody.appendChild(tr);
+        }
+
+        table.appendChild(tbody);
+        content.appendChild(table);
+
+        void showAlert({
+            title: 'More Info',
+            contentNode: content,
+            variant: 'info',
+            primaryLabel: 'Close',
+        });
     });
 
     jumpBtn.addEventListener('click', () => {
@@ -927,6 +1149,39 @@ function textToBytes(text: string): Uint8Array {
         arr[i] = text.charCodeAt(i) & 0xff;
     }
     return arr;
+}
+
+// ============================================================================================
+/**
+ * Parse a search/replacement pattern into bytes.
+ * Accepts either plain text or hex bytes like:
+ *   "02", "ff d9", "FF00D9", "0A 0B 0C".
+ * Falls back to ASCII if the value is not a clean hex sequence.
+ * @param {string} pattern - The input pattern
+ * @returns {Uint8Array} Parsed bytes
+ */
+function patternToBytes(pattern: string): Uint8Array {
+    const trimmed = pattern.trim();
+    if (!trimmed) {
+        return new Uint8Array(0);
+    }
+
+    const hexOnly = trimmed.replace(/[^0-9a-fA-F]/g, '');
+    const isHexCandidate =
+        hexOnly.length >= 2 &&
+        hexOnly.length % 2 === 0 &&
+        /^[0-9a-fA-F]+$/.test(hexOnly);
+
+    if (!isHexCandidate) {
+        return textToBytes(pattern);
+    }
+
+    const out = new Uint8Array(hexOnly.length / 2);
+    for (let i = 0; i < hexOnly.length; i += 2) {
+        const byte = Number.parseInt(hexOnly.slice(i, i + 2), 16);
+        out[i / 2] = Number.isNaN(byte) ? 0 : (byte & 0xff);
+    }
+    return out;
 }
 
 // ============================================================================================

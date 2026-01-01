@@ -153,6 +153,7 @@
     justify-content: flex-start;
     gap: 0.75rem;
     font-size: 0.85rem;
+    width: 100%;
 }
 
 .ix-toolbar-group {
@@ -237,6 +238,11 @@
     text-overflow: ellipsis;
 }
 
+.ix-toolbar .ix-status {
+    margin-left: auto;
+    text-align: right;
+}
+
 .ix-status--secondary {
     text-align: left;
 }
@@ -275,6 +281,66 @@
     margin-top: 0.75rem;
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.7);
+}
+
+.ix-editor-help-btn {
+    margin-left: auto;
+    padding-inline: 0.65rem;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.ix-help-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.ix-help-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+}
+
+.ix-help-table thead th {
+    text-align: left;
+    padding: 0.25rem 0.5rem 0.35rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.ix-help-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ix-help-table td {
+    padding: 0.25rem 0.5rem;
+    vertical-align: top;
+}
+
+.ix-help-key {
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", monospace;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.ix-help-desc {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.ix-scope-toggle {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.ix-scope-toggle p {
+    margin: 0 0 0.35rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .ix-drop-hint {
@@ -824,13 +890,12 @@
 
     .ix-toolbar {
         flex-wrap: wrap;
-        justify-content: flex-start;
+        justify-content: center;
     }
 
-    .ix-status {
-        text-align: left;
-        width: 100%;
+    .ix-toolbar .ix-status {
+        flex-basis: 100%;
         margin-left: 0;
-        max-width: none;
+        text-align: center;
     }
 }
