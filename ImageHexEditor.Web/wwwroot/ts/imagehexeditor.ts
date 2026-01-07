@@ -7,9 +7,9 @@
 import { createEmptyState, applyEdit, canRedo, canUndo, loadNewFile, redo, setActiveOffset, undo } from './editorState';
 import { createHexGrid } from './hexGrid';
 import { byteToHex, classifyByte } from './jpegStructure';
-import PhotoLightbox from '../../../../../wwwroot/ts/components/photoLightbox';
-import { showAlert, showPrompt, showConfirm } from '../../../../../wwwroot/ts/components/dialogs';
-import { getOperatingSystem } from '../../../../../wwwroot/ts/common';
+import PhotoLightbox from './shared/photoLightbox';
+import { showAlert, showPrompt, showConfirm } from './shared/dialogs';
+import { getOperatingSystem } from './shared/common';
 
 // Prevents excessive memory/CPU usage when rendering large files
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
