@@ -20,7 +20,9 @@
       <_IxClientTs>$(MSBuildProjectDirectory)/wwwroot/ts/imagehexeditor.ts</_IxClientTs>
       <_IxOutDir>$(MSBuildProjectDirectory)/wwwroot/dist/js</_IxOutDir>
       <_IxOutFile>$(_IxOutDir)/imagehexeditor.js</_IxOutFile>
-      <_EsbuildCli>$(MSBuildProjectDirectory)/../../../node_modules/esbuild/bin/esbuild</_EsbuildCli>
+      <_EsbuildCli Condition="'$(EsbuildCli)' != ''">$(EsbuildCli)</_EsbuildCli>
+
+      <_EsbuildCli Condition="'$(_EsbuildCli)' == ''">$(MSBuildProjectDirectory)/../../../node_modules/esbuild/bin/esbuild</_EsbuildCli>
     </PropertyGroup>
 
     <MakeDir Directories="$(_IxOutDir)" />
