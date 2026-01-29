@@ -20,7 +20,3 @@ public class ImageHexEditorController : Controller
         return View("~/Apps/ImageHexEditor/Views/Index.cshtml");
     }
 }
-
-
-
-
