@@ -20,10 +20,14 @@
       <_IxClientTs>$(MSBuildProjectDirectory)/wwwroot/ts/imagehexeditor.ts</_IxClientTs>
       <_IxOutDir>$(MSBuildProjectDirectory)/wwwroot/dist/js</_IxOutDir>
       <_IxOutFile>$(_IxOutDir)/imagehexeditor.js</_IxOutFile>
+      <_EsbuildCliLocal>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/node_modules/esbuild/bin/esbuild'))</_EsbuildCliLocal>
+      <_EsbuildCliPortfolio>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../../Web/Portfolio/node_modules/esbuild/bin/esbuild'))</_EsbuildCliPortfolio>
       <_EsbuildCli Condition="'$(EsbuildCli)' != ''">$(EsbuildCli)</_EsbuildCli>
-
-      <_EsbuildCli Condition="'$(_EsbuildCli)' == ''">$(MSBuildProjectDirectory)/../../../node_modules/esbuild/bin/esbuild</_EsbuildCli>
+      <_EsbuildCli Condition="'$(_EsbuildCli)' == '' and Exists('$(_EsbuildCliLocal)')">$(_EsbuildCliLocal)</_EsbuildCli>
+      <_EsbuildCli Condition="'$(_EsbuildCli)' == '' and Exists('$(_EsbuildCliPortfolio)')">$(_EsbuildCliPortfolio)</_EsbuildCli>
     </PropertyGroup>
+
+    <Error Condition="'$(_EsbuildCli)' == ''" Text="Missing esbuild CLI. Pass EsbuildCli from a host build or install dependencies in ImageHexEditor.Web or Portfolio." />
 
     <MakeDir Directories="$(_IxOutDir)" />
 
